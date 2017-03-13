@@ -112,6 +112,12 @@ extern "C" {
     #[link_name = "HELIX_I322NUM"]
     pub fn I322NUM(num: i32) -> VALUE;
 
+    #[link_name = "HELIX_FLOAT2F64"]
+    pub fn FLOAT2F64(v: VALUE) -> f64;
+
+    #[link_name = "HELIX_F642FLOAT"]
+    pub fn F642FLOAT(num: f64) -> VALUE;
+
     #[link_name = "HELIX_T_STRING"]
     pub static T_STRING: isize;
 
@@ -126,6 +132,9 @@ extern "C" {
 
     #[link_name = "HELIX_T_FIXNUM"]
     pub static T_FIXNUM: isize;
+
+    #[link_name = "HELIX_T_FLOAT"]
+    pub static T_FLOAT: isize;
 
     #[link_name = "HELIX_T_BIGNUM"]
     pub static T_BIGNUM: isize;
