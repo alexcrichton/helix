@@ -144,6 +144,9 @@ extern "C" {
     pub fn rb_define_method(class: VALUE, name: c_string, func: void_ptr, arity: isize);
     pub fn rb_inspect(value: VALUE) -> VALUE;
     pub fn rb_intern(string: c_string) -> ID;
+    pub fn rb_ary_new_capa(capa: isize) -> VALUE;
+    pub fn rb_ary_entry(ary: VALUE, offset: isize) -> VALUE;
+    pub fn rb_ary_push(ary: VALUE, item: VALUE) -> VALUE;
     pub fn rb_jump_tag(state: RubyException) -> !;
     pub fn rb_protect(try: extern "C" fn(v: void_ptr) -> VALUE,
                       arg: void_ptr,

@@ -4,6 +4,7 @@ mod unit;
 mod bool;
 mod integers;
 mod option;
+mod array;
 
 use sys::{VALUE};
 use std::ffi::CString;
