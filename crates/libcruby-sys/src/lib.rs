@@ -130,11 +130,15 @@ extern "C" {
     #[link_name = "HELIX_T_BIGNUM"]
     pub static T_BIGNUM: isize;
 
+    #[link_name = "HELIX_T_REGEXP"]
+    pub static T_REGEXP: isize;
+
     // unknown if working?
     // fn rb_define_variable(name: c_string, value: *const VALUE);
     pub fn rb_obj_class(obj: VALUE) -> VALUE;
     pub fn rb_obj_classname(obj: VALUE) -> c_string;
     pub fn rb_const_get(class: VALUE, name: ID) -> VALUE;
+    pub fn rb_class_new_instance(argc: isize, argv: *const VALUE, klass: VALUE) -> VALUE;
     pub fn rb_define_global_const(name: c_string, value: VALUE);
     pub fn rb_define_module(name: c_string) -> VALUE;
     pub fn rb_define_module_under(namespace: VALUE, name: c_string) -> VALUE;
@@ -144,6 +148,7 @@ extern "C" {
     pub fn rb_define_method(class: VALUE, name: c_string, func: void_ptr, arity: isize);
     pub fn rb_inspect(value: VALUE) -> VALUE;
     pub fn rb_intern(string: c_string) -> ID;
+    pub fn rb_funcall(target: VALUE, name: ID, argc: isize, ...) -> VALUE;
     pub fn rb_jump_tag(state: RubyException) -> !;
     pub fn rb_protect(try: extern "C" fn(v: void_ptr) -> VALUE,
                       arg: void_ptr,

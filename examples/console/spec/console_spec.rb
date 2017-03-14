@@ -33,4 +33,12 @@ describe "Console" do
     expect(console.is_red("hello")).to eq(false)
     expect(console.is_red("hello".colorize(:red))).to eq(true)
   end
+
+  it "can take a regex" do
+    expect { console.log_regex(/[a-z]\w+/im) }.to println('(?mi-x:[a-z]\w+)')
+  end
+
+  it "can return a regex" do
+    expect(console.filter("testing")).to eq(/LOG[(testing)?]:\s+/)
+  end
 end
