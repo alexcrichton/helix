@@ -22,6 +22,16 @@ pub use class_definition::{ClassDefinition, MethodDefinition};
 #[derive(Copy, Clone)]
 pub struct Class(sys::VALUE);
 
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub struct Symbol(String);
+
+// Unfortunately the tuple struct constructor isn't public, do this to expose it
+impl Symbol {
+    pub fn new(string: String) -> Symbol {
+        Symbol(string)
+    }
+}
+
 pub trait RubyMethod {
     fn install(self, class: VALUE, name: &str);
 }

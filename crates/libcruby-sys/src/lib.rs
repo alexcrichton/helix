@@ -115,6 +115,9 @@ extern "C" {
     #[link_name = "HELIX_T_STRING"]
     pub static T_STRING: isize;
 
+    #[link_name = "HELIX_T_SYMBOL"]
+    pub static T_SYMBOL: isize;
+
     #[link_name = "HELIX_T_ARRAY"]
     pub static T_ARRAY: isize;
 
@@ -144,6 +147,8 @@ extern "C" {
     pub fn rb_define_method(class: VALUE, name: c_string, func: void_ptr, arity: isize);
     pub fn rb_inspect(value: VALUE) -> VALUE;
     pub fn rb_intern(string: c_string) -> ID;
+    pub fn rb_sym2str(sym: VALUE) -> VALUE;
+    pub fn rb_to_symbol(name: VALUE) -> VALUE;
     pub fn rb_ary_new_capa(capa: isize) -> VALUE;
     pub fn rb_ary_entry(ary: VALUE, offset: isize) -> VALUE;
     pub fn rb_ary_push(ary: VALUE, item: VALUE) -> VALUE;
