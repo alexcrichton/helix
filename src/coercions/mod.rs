@@ -6,7 +6,7 @@ mod integers;
 mod float;
 mod option;
 
-use sys::{VALUE};
+use sys::VALUE;
 use std::marker::PhantomData;
 
 pub struct CheckedValue<T> {
@@ -32,4 +32,10 @@ pub trait ToRust<T> {
 
 pub trait ToRuby {
     fn to_ruby(self) -> VALUE;
+}
+
+impl ToRuby for VALUE {
+    fn to_ruby(self) -> VALUE {
+        self
+    }
 }
