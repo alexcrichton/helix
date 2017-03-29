@@ -8,7 +8,7 @@ pub extern crate libcruby_sys as sys;
 // pub use rb;
 
 use std::ffi::CString;
-use sys::VALUE;
+use sys::{VALUE, RubyTag};
 
 mod macros;
 mod class_definition;
@@ -19,7 +19,7 @@ pub use coercions::*;
 pub use class_definition::{ClassDefinition, MethodDefinition};
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct Class(sys::VALUE);
 
 pub trait RubyMethod {
@@ -80,25 +80,22 @@ pub fn inspect(val: VALUE) -> String {
 
 pub type Metadata = ::sys::VALUE;
 
-#[derive(Clone)]
-pub struct Exception {
-    ruby_class: Class,
-    message: String
+
+#[derive(Clone, Debug)]
+pub enum Exception {
+    Library(Class, String), // Ruby class, message
+    Ruby(RubyTag)
 }
 
 impl Exception {
     pub fn with_message(string: String) -> Exception {
-        Exception {
-            ruby_class: Class(unsafe { sys::rb_eRuntimeError }),
-            message: string
-        }
+        let class = Class(unsafe { sys::rb_eRuntimeError });
+        Exception::Library(class, string)
     }
 
     pub fn type_error(string: String) -> Exception {
-        Exception {
-            ruby_class: Class(unsafe { sys::rb_eTypeError }),
-            message: string
-        }
+        let class = Class(unsafe { sys::rb_eTypeError });
+        Exception::Library(class, string)
     }
 
     pub fn from_any(any: Box<std::any::Any>) -> Exception {
@@ -114,16 +111,28 @@ impl Exception {
         }
     }
 
-    pub fn message(&self) -> &String {
-        &self.message
+    pub fn from_state(state: RubyTag) -> Exception {
+        Exception::Ruby(state)
     }
 
     pub fn raise(&self) -> sys::VALUE {
-        unsafe {
-            // Hopefully this doesn't leak memory!
-            sys::rb_raise(self.ruby_class.0, sys::PRINT_VALUE_STR, self.message.clone().to_ruby());
-            sys::Qnil // Return a Ruby nil
+        // Both of these will immediately leave the Rust stack. We need to be careful that nothing is
+        // left behind. If there are memory leaks, this is definitely a possible culprit.
+        match *self {
+            Exception::Library(c, ref m) => {
+                unsafe {
+                    // We're passing in a Ruby string to this in hopes that Ruby will clean it up.
+                    sys::rb_raise(c.0, sys::PRINT_VALUE_STR, m.clone().to_ruby());
+                }
+            }
+
+            Exception::Ruby(t) => {
+                unsafe {
+                    sys::rb_jump_tag(t)
+                }
+            }
         }
+        unsafe { sys::Qnil } // Return a Ruby nil
     }
 }
 

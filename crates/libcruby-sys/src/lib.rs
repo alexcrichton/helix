@@ -30,23 +30,15 @@ pub struct VALUE(void_ptr);
 
 #[repr(C)]
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
-pub struct RubyException(isize);
+pub struct RubyTag(isize);
 
-impl RubyException {
-    pub fn new() -> RubyException {
-        RubyException(0)
-    }
-
-    pub fn empty() -> RubyException {
-        RubyException(0)
-    }
-
-    pub fn for_tag(tag: isize) -> RubyException {
-        RubyException(tag)
+impl RubyTag {
+    pub fn is_empty(&self) -> bool {
+        self.0 == 0
     }
 }
 
-pub const EMPTY_EXCEPTION: RubyException = RubyException(0);
+pub const EMPTY_TAG: RubyTag = RubyTag(0);
 
 #[cfg_attr(windows, link(name="helix-runtime"))]
 extern "C" {
@@ -87,7 +79,7 @@ extern "C" {
     pub fn RARRAY_LEN(array: VALUE) -> isize;
 
     #[link_name = "HELIX_RARRAY_PTR"]
-    pub fn RARRAY_PTR(array: VALUE) -> void_ptr;
+    pub fn RARRAY_PTR(array: VALUE) -> *const VALUE;
 
     #[link_name = "HELIX_RB_TYPE_P"]
     pub fn RB_TYPE_P(val: VALUE, rb_type: isize) -> bool;
@@ -148,8 +140,6 @@ extern "C" {
     #[link_name = "HELIX_T_BIGNUM"]
     pub static T_BIGNUM: isize;
 
-    // unknown if working?
-    // fn rb_define_variable(name: c_string, value: *const VALUE);
     pub fn rb_obj_class(obj: VALUE) -> VALUE;
     pub fn rb_obj_classname(obj: VALUE) -> c_string;
     pub fn rb_const_get(class: VALUE, name: ID) -> VALUE;
@@ -163,13 +153,18 @@ extern "C" {
     pub fn rb_define_singleton_method(class: VALUE, name: c_string, func: void_ptr, arity: isize);
     pub fn rb_inspect(value: VALUE) -> VALUE;
     pub fn rb_intern(string: c_string) -> ID;
+    pub fn rb_intern_str(string: VALUE) -> ID;
     pub fn rb_raise(exc: VALUE, string: c_string, ...);
 
-    pub fn rb_jump_tag(state: RubyException) -> !;
-    pub fn rb_protect(try: extern "C" fn(v: void_ptr) -> VALUE,
-                      arg: void_ptr,
-                      state: *mut RubyException)
+    pub fn rb_funcallv(target: VALUE, name: ID, argc: isize, argv: *const VALUE) -> VALUE;
+
+    pub fn rb_jump_tag(state: RubyTag) -> !;
+    pub fn rb_protect(try: extern "C" fn(v: VALUE) -> VALUE,
+                      arg: VALUE,
+                      state: *mut RubyTag)
                       -> VALUE;
+
+    pub fn rb_ary_new_from_values(n: isize, elts: *const VALUE) -> VALUE;
 
     #[link_name = "HELIX_Data_Wrap_Struct"]
     pub fn Data_Wrap_Struct(klass: VALUE, mark: extern "C" fn(void_ptr), free: extern "C" fn(void_ptr), data: void_ptr) -> VALUE;

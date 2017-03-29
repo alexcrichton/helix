@@ -30,6 +30,50 @@ macro_rules! throw {
     }
 }
 
+#[macro_export]
+macro_rules! ruby_funcall {
+    // NOTE: Class and method cannot be variables. If that becomes necessary, I think we'll have to pass them
+    ($rb_class:expr, $meth:expr, $( $arg:expr ),*) => {
+        {
+            use $crate::ToRuby;
+
+            // This method takes a Ruby Array of arguments
+            // If there is a way to make this behave like a closure, we could further simplify things.
+            #[allow(unused_variables)]
+            extern "C" fn __ruby_funcall_cb(arg_ary: $crate::sys::VALUE) -> $crate::sys::VALUE {
+                unsafe {
+                    // NOTE: We're using rb_intern_str, not rb_intern in the hopes that this means
+                    //   Ruby will clean up the string in the event that there is an exception
+                    $crate::sys::rb_funcallv($rb_class, sys::rb_intern_str(String::from($meth).to_ruby()),
+                                                $crate::sys::RARRAY_LEN(arg_ary), $crate::sys::RARRAY_PTR(arg_ary))
+                }
+            }
+
+            let mut state = $crate::sys::EMPTY_TAG;
+
+            let res = unsafe {
+                let mut arg_ary = Vec::new();
+                $(
+                    // We have to create this iteratively since we have to call to_ruby individually
+                    arg_ary.push($arg.to_ruby());
+                )*
+                let arg_ary = $crate::sys::rb_ary_new_from_values(arg_ary.len() as isize, arg_ary.as_mut_ptr());
+                $crate::sys::rb_protect(__ruby_funcall_cb, arg_ary, &mut state)
+            };
+
+            if !state.is_empty() {
+                panic!($crate::Exception::from_state(state));
+            }
+
+            res
+        }
+    };
+
+    ($rb_class:expr, $meth:expr) => {
+        ruby_funcall!($rb_class, $meth, )
+    }
+}
+
 #[doc(hidden)]
 #[macro_export]
 macro_rules! define_struct {
