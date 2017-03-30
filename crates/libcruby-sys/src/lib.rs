@@ -5,6 +5,9 @@ extern crate libc;
 
 use std::ffi::CStr;
 
+#[macro_use]
+mod macros;
+
 pub const PKG_VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
 pub fn check_version() {
@@ -28,6 +31,17 @@ pub struct ID(*mut void);
 #[repr(C)]
 #[derive(Eq, PartialEq, Copy, Clone, Debug)]
 pub struct VALUE(*mut void);
+
+impl VALUE {
+    pub fn wrap(ptr: void_ptr) -> VALUE {
+        VALUE(ptr)
+    }
+
+    // Is this correct?
+    pub fn as_ptr(&self) -> void_ptr {
+        self.0
+    }
+}
 
 #[repr(C)]
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
@@ -150,9 +164,7 @@ extern "C" {
     pub fn rb_define_global_const(name: c_string, value: VALUE);
     pub fn rb_define_module(name: c_string) -> VALUE;
     pub fn rb_define_module_under(namespace: VALUE, name: c_string) -> VALUE;
-    pub fn rb_define_class(name: c_string, superclass: VALUE) -> VALUE;
     pub fn rb_define_class_under(namespace: VALUE, name: c_string, superclass: VALUE) -> VALUE;
-    pub fn rb_define_alloc_func(klass: VALUE, func: extern "C" fn(klass: VALUE) -> VALUE);
     pub fn rb_define_method(class: VALUE, name: c_string, func: c_func, arity: isize);
     pub fn rb_define_singleton_method(class: VALUE, name: c_string, func: c_func, arity: isize);
     pub fn rb_inspect(value: VALUE) -> VALUE;
@@ -163,10 +175,13 @@ extern "C" {
     pub fn rb_funcallv(target: VALUE, name: ID, argc: isize, argv: *const VALUE) -> VALUE;
 
     pub fn rb_jump_tag(state: RubyTag) -> !;
-    pub fn rb_protect(try: extern "C" fn(v: VALUE) -> VALUE,
-                      arg: VALUE,
+    // In official Ruby docs, all of these void_ptrs are actually VALUEs.
+    // However, they are interchangeable in practice and using a void_ptr allows us to pass
+    // other things that aren't VALUEs
+    pub fn rb_protect(try: extern "C" fn(v: void_ptr) -> void_ptr,
+                      arg: void_ptr,
                       state: *mut RubyTag)
-                      -> VALUE;
+                      -> void_ptr;
 
     pub fn rb_ary_new_from_values(n: isize, elts: *const VALUE) -> VALUE;
 
@@ -178,4 +193,11 @@ extern "C" {
 
     #[link_name = "HELIX_Data_Set_Struct_Value"]
     pub fn Data_Set_Struct_Value(obj: VALUE, data: *mut void);
+}
+
+// These may not all be strictly necessary. If we're concerned about performance we can
+// audit and if we're sure that `rb_raise` won't be called we can avoid the safe wrapper
+ruby_safe_c! {
+    rb_define_class(name: c_string, superclass: VALUE) -> VALUE;
+    rb_define_alloc_func(klass: VALUE, func: extern "C" fn(klass: VALUE) -> VALUE);
 }

@@ -10,6 +10,7 @@ pub extern crate libcruby_sys as sys;
 use std::ffi::CString;
 use sys::{VALUE, RubyTag};
 
+#[macro_use]
 mod macros;
 mod class_definition;
 mod coercions;
