@@ -46,10 +46,13 @@ describe "Console" do
     expect(console.call_ruby).to eq("\"Object\", true, true")
   end
 
-  it "can handle invalid calls back to Ruby" do
-    # NOTE: This doesn't verify that Rust unwound correctly
-    expect {
-      console.behave_badly
-    }.to raise_error(NameError, "undefined method `does_not_exist' for Object:Class");
+  # See https://github.com/rust-lang/rust/issues/40973
+  unless RUBY_PLATFORM =~ /mingw/ && RbConfig::CONFIG['host_cpu'] !~ /64/
+    it "can handle invalid calls back to Ruby" do
+      # NOTE: This doesn't verify that Rust unwound correctly
+      expect {
+        console.behave_badly
+      }.to raise_error(NameError, "undefined method `does_not_exist' for Object:Class");
+    end
   end
 end
