@@ -22,7 +22,6 @@ pub fn check_version() {
 pub type void = libc::c_void;
 pub type c_func = *const void;
 pub type c_string = *const libc::c_char;
-// pub type c_func = extern "C" fn(...);
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
@@ -33,12 +32,12 @@ pub struct ID(*mut void);
 pub struct VALUE(*mut void);
 
 impl VALUE {
-    pub fn wrap(ptr: void_ptr) -> VALUE {
+    pub fn wrap(ptr: *mut void) -> VALUE {
         VALUE(ptr)
     }
 
     // Is this correct?
-    pub fn as_ptr(&self) -> void_ptr {
+    pub fn as_ptr(&mut self) -> *mut void {
         self.0
     }
 }
@@ -158,16 +157,11 @@ extern "C" {
     #[link_name = "HELIX_T_BIGNUM"]
     pub static T_BIGNUM: isize;
 
+    // It doesn't appear that these functions will rb_raise. If it turns out they can, we
+    // should make sure to safe wrap them.
     pub fn rb_obj_class(obj: VALUE) -> VALUE;
     pub fn rb_obj_classname(obj: VALUE) -> c_string;
-    pub fn rb_const_get(class: VALUE, name: ID) -> VALUE;
-    pub fn rb_define_global_const(name: c_string, value: VALUE);
-    pub fn rb_define_module(name: c_string) -> VALUE;
-    pub fn rb_define_module_under(namespace: VALUE, name: c_string) -> VALUE;
-    pub fn rb_define_class_under(namespace: VALUE, name: c_string, superclass: VALUE) -> VALUE;
-    pub fn rb_define_method(class: VALUE, name: c_string, func: c_func, arity: isize);
-    pub fn rb_define_singleton_method(class: VALUE, name: c_string, func: c_func, arity: isize);
-    pub fn rb_inspect(value: VALUE) -> VALUE;
+
     pub fn rb_intern(string: c_string) -> ID;
     pub fn rb_intern_str(string: VALUE) -> ID;
     pub fn rb_raise(exc: VALUE, string: c_string, ...);
@@ -175,29 +169,40 @@ extern "C" {
     pub fn rb_funcallv(target: VALUE, name: ID, argc: isize, argv: *const VALUE) -> VALUE;
 
     pub fn rb_jump_tag(state: RubyTag) -> !;
-    // In official Ruby docs, all of these void_ptrs are actually VALUEs.
-    // However, they are interchangeable in practice and using a void_ptr allows us to pass
+
+    // In official Ruby docs, all of these void* are actually VALUEs.
+    // However, they are interchangeable in practice and using a void* allows us to pass
     // other things that aren't VALUEs
-    pub fn rb_protect(try: extern "C" fn(v: void_ptr) -> void_ptr,
-                      arg: void_ptr,
+    pub fn rb_protect(try: extern "C" fn(v: *mut void) -> *mut void,
+                      arg: *mut void,
                       state: *mut RubyTag)
-                      -> void_ptr;
+                      -> *mut void;
 
     pub fn rb_ary_new_from_values(n: isize, elts: *const VALUE) -> VALUE;
-
-    #[link_name = "HELIX_Data_Wrap_Struct"]
-    pub fn Data_Wrap_Struct(klass: VALUE, mark: extern "C" fn(*mut void), free: extern "C" fn(*mut void), data: *mut void) -> VALUE;
-
-    #[link_name = "HELIX_Data_Get_Struct_Value"]
-    pub fn Data_Get_Struct_Value(obj: VALUE) -> *mut void;
-
-    #[link_name = "HELIX_Data_Set_Struct_Value"]
-    pub fn Data_Set_Struct_Value(obj: VALUE, data: *mut void);
 }
 
 // These may not all be strictly necessary. If we're concerned about performance we can
 // audit and if we're sure that `rb_raise` won't be called we can avoid the safe wrapper
 ruby_safe_c! {
+    rb_const_get(class: VALUE, name: ID) -> VALUE;
+    rb_define_module(name: c_string) -> VALUE;
+    rb_define_module_under(namespace: VALUE, name: c_string) -> VALUE;
     rb_define_class(name: c_string, superclass: VALUE) -> VALUE;
+    rb_define_class_under(namespace: VALUE, name: c_string, superclass: VALUE) -> VALUE;
     rb_define_alloc_func(klass: VALUE, func: extern "C" fn(klass: VALUE) -> VALUE);
+    rb_define_method(class: VALUE, name: c_string, func: c_func, arity: isize);
+    rb_define_singleton_method(class: VALUE, name: c_string, func: c_func, arity: isize);
+    rb_inspect(value: VALUE) -> VALUE;
+
+    #[link_name = "HELIX_Data_Wrap_Struct"]
+    Data_Wrap_Struct(klass: VALUE, mark: extern "C" fn(*mut void), free: extern "C" fn(*mut void), data: *mut void) -> VALUE;
+
+    #[link_name = "HELIX_Data_Get_Struct_Value"]
+    Data_Get_Struct_Value(obj: VALUE) -> *mut void {
+        fn ret_to_ptr(ret: *mut void) -> *mut void { ret }
+        fn ptr_to_ret(ptr: *mut void) -> *mut void { ptr }
+    }
+
+    #[link_name = "HELIX_Data_Set_Struct_Value"]
+    Data_Set_Struct_Value(obj: VALUE, data: *mut void);
 }

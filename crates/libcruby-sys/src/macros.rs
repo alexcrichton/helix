@@ -1,18 +1,40 @@
+// TODO: See if we can simplify
 #[doc(hidden)]
 #[macro_export]
 macro_rules! ruby_extern_fns {
-    { $name:ident($( $argn:ident: $argt:ty ),*) -> $ret:ty; $($rest:tt)* } => {
+    // We don't need the body here
+    { #[$attr:meta] $name:ident($( $argn:ident: $argt:ty ),*) -> $ret:ty { $($_body:tt)* } $($rest:tt)* } => {
+        ruby_extern_fns! { #[$attr] $name($( $argn: $argt ),*) -> $ret; $($rest)* } };
+
+    { #[$attr:meta] $name:ident($( $argn:ident: $argt:ty ),*) -> $ret:ty; $($rest:tt)* } => {
         #[cfg_attr(windows, link(name="helix-runtime"))]
         extern "C" {
+            #[$attr]
             pub fn $name($($argn: $argt),*) -> $ret;
         }
         ruby_extern_fns! { $($rest)* }
     };
-    { $name:ident($( $argn:ident: $argt:ty ),*); $($rest:tt)* } => {
+    { #[$attr:meta] $name:ident($( $argn:ident: $argt:ty ),*); $($rest:tt)* } => {
         #[cfg_attr(windows, link(name="helix-runtime"))]
         extern "C" {
+            #[$attr]
             pub fn $name($($argn: $argt),*);
         }
+        ruby_extern_fns! { $($rest)* }
+    };
+
+    // We don't need the body here
+    { $name:ident($( $argn:ident: $argt:ty ),*) -> $ret:ty { $($_body:tt)* } $($rest:tt)* } => {
+        ruby_extern_fns! { $name($( $argn: $argt ),*) -> $ret; $($rest)* } };
+
+    { $name:ident($( $argn:ident: $argt:ty ),*) -> $ret:ty; $($rest:tt)* } => {
+        #[cfg_attr(windows, link(name="helix-runtime"))]
+        extern "C" { pub fn $name($($argn: $argt),*) -> $ret; }
+        ruby_extern_fns! { $($rest)* }
+    };
+    { $name:ident($( $argn:ident: $argt:ty ),*); $($rest:tt)* } => {
+        #[cfg_attr(windows, link(name="helix-runtime"))]
+        extern "C" { pub fn $name($($argn: $argt),*); }
         ruby_extern_fns! { $($rest)* }
     };
 
@@ -21,52 +43,8 @@ macro_rules! ruby_extern_fns {
 
 #[doc(hidden)]
 #[macro_export]
-macro_rules! ruby_safe_cb_body {
-    { $name:ident, $args_ptr:expr, $( $argn:ident ),* } => {
-        unsafe {
-            let args: &Args = &*($args_ptr as *const Args);
-            $crate::$name($( args.$argn ),*)
-        }
-    }
-}
-
-#[doc(hidden)]
-#[macro_export]
-macro_rules! ruby_safe_cb {
-    { $name:ident($( $argn:ident ),*) } => {
-        extern "C" fn cb(args_ptr: $crate::void_ptr) -> $crate::void_ptr {
-            ruby_safe_cb_body!($name, args_ptr, $( $argn ),*);
-            unsafe { $crate::Qnil }.as_ptr()
-        }
-    };
-    { $name:ident($( $argn:ident ),*) -> $ret:ty } => {
-        extern "C" fn cb(args_ptr: $crate::void_ptr) -> $crate::void_ptr {
-            ruby_safe_cb_body!($name, args_ptr, $( $argn ),*).as_ptr()
-        }
-    }
-}
-
-#[doc(hidden)]
-#[macro_export]
-macro_rules! ruby_safe_call {
-    { $args:expr } => {
-        {
-            let mut state = $crate::EMPTY_TAG;
-
-            let res = unsafe {
-                let args_ptr: void_ptr = &$args as *const _ as void_ptr;
-                $crate::rb_protect(cb, args_ptr, &mut state)
-            };
-
-            (res, state)
-        }
-    }
-}
-
-#[doc(hidden)]
-#[macro_export]
-macro_rules! ruby_safe_fns {
-    { $name:ident($( $argn:ident: $argt:ty ),*) -> $ret:ty; $($rest:tt)* } => {
+macro_rules! ruby_safe_fn {
+    { $name:ident($( $argn:ident: $argt:ty ),*) -> $ret:ty { $($funcs:tt)+ } } => {
         pub fn $name($( $argn: $argt ),*) -> Result<$ret, $crate::RubyTag> {
             // FIXME: Avoid creating args struct if there are no args
             #[repr(C)]
@@ -75,50 +53,69 @@ macro_rules! ruby_safe_fns {
                 pub $($argn: $argt),*
             };
 
-            let args = Args {
-                $($argn: $argn),*
+            let args = Args { $($argn: $argn),* };
+
+            // Must include ret_to_ptr and ptr_to_ret
+            $($funcs)+
+
+            extern "C" fn cb(args_ptr: $crate::void_ptr) -> $crate::void_ptr {
+                let ret = unsafe {
+                    let args: &Args = &*(args_ptr as *const Args);
+                    $crate::$name($( args.$argn ),*)
+                };
+                ret_to_ptr(ret)
+            }
+
+            let mut state = $crate::EMPTY_TAG;
+
+            let res = unsafe {
+                let args_ptr: void_ptr = &args as *const _ as void_ptr;
+                $crate::rb_protect(cb, args_ptr, &mut state)
             };
 
-            ruby_safe_cb! {
-                $name($($argn),*) -> $ret
-            }
-
-            let (res, state) = ruby_safe_call!(args);
-
             if !state.is_empty() {
-                return Err(state);
+                Err(state)
+            } else {
+                Ok(ptr_to_ret(res))
             }
+        }
+    };
+}
 
-            Ok($crate::VALUE::wrap(res))
+#[doc(hidden)]
+#[macro_export]
+macro_rules! ruby_safe_fns {
+    // We don't need the meta here
+    { #[$attr:meta] $($rest:tt)* } => {
+        ruby_safe_fns! { $($rest)* }
+    };
+
+    // It's not quite ideal to have to define each type separately, but the coercions are different
+    { $name:ident($( $argn:ident: $argt:ty ),*) -> VALUE; $($rest:tt)* } => {
+        ruby_safe_fn! {
+            $name($( $argn: $argt ),*) -> $crate::VALUE {
+                fn ret_to_ptr(ret: $crate::VALUE) -> $crate::void_ptr { ret.as_ptr() }
+                fn ptr_to_ret(ptr: $crate::void_ptr) -> $crate::VALUE { $crate::VALUE::wrap(ptr) }
+            }
+        }
+
+        ruby_safe_fns! { $($rest)* }
+    };
+
+    { $name:ident($( $argn:ident: $argt:ty ),*) -> $ret:ty { $($conv:tt)* } $($rest:tt)* } => {
+        ruby_safe_fn! {
+            $name($( $argn: $argt ),*) -> $ret { $($conv)* }
         }
 
         ruby_safe_fns! { $($rest)* }
     };
 
     { $name:ident($( $argn:ident: $argt:ty ),*); $($rest:tt)* } => {
-        pub fn $name($( $argn: $argt ),*) -> Result<(), $crate::RubyTag> {
-            // FIXME: Avoid creating args struct if there are no args
-            #[repr(C)]
-            #[derive(Copy, Clone, Debug)]
-            struct Args {
-                pub $($argn: $argt),*
-            };
-
-            let args = Args {
-                $($argn: $argn),*
-            };
-
-            ruby_safe_cb! {
-                $name($($argn),*)
+        ruby_safe_fn! {
+            $name($( $argn: $argt ),*) -> () {
+                fn ret_to_ptr(_: ()) -> $crate::void_ptr { unsafe { $crate::Qnil }.as_ptr() }
+                fn ptr_to_ret(_: $crate::void_ptr) { }
             }
-
-            let (_, state) = ruby_safe_call!(args);
-
-            if !state.is_empty() {
-                return Err(state);
-            }
-
-            Ok(())
         }
 
         ruby_safe_fns! { $($rest)* }
