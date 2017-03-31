@@ -38,7 +38,9 @@ install:
 
 test_script:
   # - bash ./scripts/ci-test
-  - cd examples/console
+  - cd ruby
+  - bundle exec rake
+  - cd ../examples/console
   - bundle exec rake
 
 notifications:
