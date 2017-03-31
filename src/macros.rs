@@ -43,6 +43,8 @@ macro_rules! ruby_funcall {
         {
             use $crate::ToRuby;
 
+            panic!("Aaahh");
+
             // This method takes a Ruby Array of arguments
             // If there is a way to make this behave like a closure, we could further simplify things.
             #[allow(unused_variables)]
@@ -155,8 +157,7 @@ macro_rules! handle_exception {
         }
 
         let res = ::std::panic::catch_unwind(|| {
-            panic!("Aaaaaahhhhh!");
-            // $($body)*
+            $($body)*
         });
 
         if hide_err {
