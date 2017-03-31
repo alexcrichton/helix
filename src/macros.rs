@@ -66,8 +66,8 @@ macro_rules! ruby_funcall {
                     arg_ary.push($arg.to_ruby());
                 )*
                 let arg_ary = $crate::sys::rb_ary_new_from_values(arg_ary.len() as isize, arg_ary.as_mut_ptr());
+                $crate::sys::rb_protect(__ruby_funcall_cb, arg_ary.as_ptr(), &mut state);
                 panic!("Aaaahhhh");
-                $crate::sys::rb_protect(__ruby_funcall_cb, arg_ary.as_ptr(), &mut state)
             };
 
             if !state.is_empty() {
