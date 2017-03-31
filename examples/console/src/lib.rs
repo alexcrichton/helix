@@ -38,7 +38,7 @@ declare_types! {
         }
 
         def behave_badly(&self) {
-            ruby_funcall!(sys::rb_cObject, "does_not_exist", String::from("one"));
+            ruby_funcall!(sys::rb_cObject, "raise", String::from("fail"));
         }
 
         def call_ruby(&self) -> String {
