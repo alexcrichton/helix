@@ -37,7 +37,9 @@ install:
   - bash ./scripts/ci-install
 
 test_script:
-  - bash ./scripts/ci-test
+  # - bash ./scripts/ci-test
+  - cd examples/console
+  - bundle exec rake
 
 notifications:
   - provider: Slack
