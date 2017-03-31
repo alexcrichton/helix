@@ -29,27 +29,23 @@ pub trait RubyMethod {
 
 impl RubyMethod for extern "C" fn(VALUE) -> VALUE {
     fn install(self, class: VALUE, name: &str) {
-        unsafe {
-            sys::rb_define_method(
-                class,
-                CString::new(name).unwrap().as_ptr(),
-                self as *const libc::c_void,
-                0
-            );
-        }
+        ruby_try!(sys::safe::rb_define_method(
+            class,
+            CString::new(name).unwrap().as_ptr(),
+            self as *const libc::c_void,
+            0
+        ));
     }
 }
 
 impl RubyMethod for extern "C" fn(VALUE, VALUE) -> VALUE {
     fn install(self, class: VALUE, name: &str) {
-        unsafe {
-            sys::rb_define_method(
-                class,
-                CString::new(name).unwrap().as_ptr(),
-                self as *const libc::c_void,
-                1
-            );
-        }
+        ruby_try!(sys::safe::rb_define_method(
+            class,
+            CString::new(name).unwrap().as_ptr(),
+            self as *const libc::c_void,
+            1
+        ));
     }
 }
 
@@ -76,7 +72,7 @@ impl Class {
 }
 
 pub fn inspect(val: VALUE) -> String {
-    unsafe { CheckedValue::<String>::new(sys::rb_inspect(val)).to_rust() }
+    unsafe { CheckedValue::<String>::new(ruby_try!(sys::safe::rb_inspect(val))).to_rust() }
 }
 
 pub type Metadata = ::sys::VALUE;

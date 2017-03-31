@@ -42,7 +42,7 @@ impl ClassDefinition {
     pub fn reopen(name: &str) -> ClassDefinition {
         let raw_class = unsafe {
             let class_id = sys::rb_intern(CString::new(name).unwrap().as_ptr());
-            sys::rb_const_get(sys::rb_cObject, class_id)
+            ruby_try!(sys::safe::rb_const_get(sys::rb_cObject, class_id))
         };
         ClassDefinition { class: Class(raw_class) }
     }
@@ -50,24 +50,20 @@ impl ClassDefinition {
     pub fn define_method(self, def: MethodDefinition) -> ClassDefinition {
         match def {
             MethodDefinition::Instance(def) => {
-                unsafe {
-                    sys::rb_define_method(
-                        self.class.0,
-                        CString::new(def.name).unwrap().as_ptr(),
-                        def.function,
-                        def.arity
-                    );
-                };
+                ruby_try!(sys::safe::rb_define_method(
+                    self.class.0,
+                    CString::new(def.name).unwrap().as_ptr(),
+                    def.function,
+                    def.arity
+                ));
             },
             MethodDefinition::Class(def) => {
-                unsafe {
-                    sys::rb_define_singleton_method(
-                        self.class.0,
-                        CString::new(def.name).unwrap().as_ptr(),
-                        def.function,
-                        def.arity
-                    );
-                };
+                ruby_try!(sys::safe::rb_define_singleton_method(
+                    self.class.0,
+                    CString::new(def.name).unwrap().as_ptr(),
+                    def.function,
+                    def.arity
+                ));
             }
         }
 

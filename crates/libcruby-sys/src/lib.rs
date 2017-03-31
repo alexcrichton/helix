@@ -154,16 +154,11 @@ extern "C" {
     #[link_name = "HELIX_T_BIGNUM"]
     pub static T_BIGNUM: isize;
 
+    // It doesn't appear that these functions will rb_raise. If it turns out they can, we
+    // should make sure to safe wrap them.
     pub fn rb_obj_class(obj: VALUE) -> VALUE;
     pub fn rb_obj_classname(obj: VALUE) -> c_string;
-    pub fn rb_const_get(class: VALUE, name: ID) -> VALUE;
-    pub fn rb_define_global_const(name: c_string, value: VALUE);
-    pub fn rb_define_module(name: c_string) -> VALUE;
-    pub fn rb_define_module_under(namespace: VALUE, name: c_string) -> VALUE;
-    pub fn rb_define_class_under(namespace: VALUE, name: c_string, superclass: VALUE) -> VALUE;
-    pub fn rb_define_method(class: VALUE, name: c_string, func: void_ptr, arity: isize);
-    pub fn rb_define_singleton_method(class: VALUE, name: c_string, func: void_ptr, arity: isize);
-    pub fn rb_inspect(value: VALUE) -> VALUE;
+
     pub fn rb_intern(string: c_string) -> ID;
     pub fn rb_intern_str(string: VALUE) -> ID;
     pub fn rb_raise(exc: VALUE, string: c_string, ...);
@@ -180,20 +175,30 @@ extern "C" {
                       -> void_ptr;
 
     pub fn rb_ary_new_from_values(n: isize, elts: *const VALUE) -> VALUE;
-
-    #[link_name = "HELIX_Data_Wrap_Struct"]
-    pub fn Data_Wrap_Struct(klass: VALUE, mark: extern "C" fn(void_ptr), free: extern "C" fn(void_ptr), data: void_ptr) -> VALUE;
-
-    #[link_name = "HELIX_Data_Get_Struct_Value"]
-    pub fn Data_Get_Struct_Value(obj: VALUE) -> void_ptr;
-
-    #[link_name = "HELIX_Data_Set_Struct_Value"]
-    pub fn Data_Set_Struct_Value(obj: VALUE, data: void_ptr);
 }
 
 // These may not all be strictly necessary. If we're concerned about performance we can
 // audit and if we're sure that `rb_raise` won't be called we can avoid the safe wrapper
 ruby_safe_c! {
+    rb_const_get(class: VALUE, name: ID) -> VALUE;
+    rb_define_module(name: c_string) -> VALUE;
+    rb_define_module_under(namespace: VALUE, name: c_string) -> VALUE;
     rb_define_class(name: c_string, superclass: VALUE) -> VALUE;
+    rb_define_class_under(namespace: VALUE, name: c_string, superclass: VALUE) -> VALUE;
     rb_define_alloc_func(klass: VALUE, func: extern "C" fn(klass: VALUE) -> VALUE);
+    rb_define_method(class: VALUE, name: c_string, func: void_ptr, arity: isize);
+    rb_define_singleton_method(class: VALUE, name: c_string, func: void_ptr, arity: isize);
+    rb_inspect(value: VALUE) -> VALUE;
+
+    #[link_name = "HELIX_Data_Wrap_Struct"]
+    Data_Wrap_Struct(klass: VALUE, mark: extern "C" fn(void_ptr), free: extern "C" fn(void_ptr), data: void_ptr) -> VALUE;
+
+    #[link_name = "HELIX_Data_Get_Struct_Value"]
+    Data_Get_Struct_Value(obj: VALUE) -> void_ptr {
+        fn ret_to_ptr(ret: void_ptr) -> void_ptr { ret }
+        fn ptr_to_ret(ptr: void_ptr) -> void_ptr { ptr }
+    }
+
+    #[link_name = "HELIX_Data_Set_Struct_Value"]
+    Data_Set_Struct_Value(obj: VALUE, data: void_ptr);
 }

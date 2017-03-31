@@ -397,16 +397,12 @@ macro_rules! class_definition {
             fn __alloc_with__(rust_self: Option<Box<$cls>>) -> $crate::sys::VALUE {
                 use ::std::mem::transmute;
 
-                unsafe {
-                    let instance = $crate::sys::Data_Wrap_Struct(
-                        transmute(__HELIX_ID),
-                        transmute(__mark__ as usize),
-                        transmute(__free__ as usize),
-                        transmute(rust_self)
-                    );
-
-                    instance
-                }
+                ruby_try!($crate::sys::safe::Data_Wrap_Struct(
+                    transmute(__HELIX_ID),
+                    transmute(__mark__ as usize),
+                    transmute(__free__ as usize),
+                    transmute(rust_self)
+                ))
             }
 
             impl $crate::ToRuby for $cls {
@@ -422,7 +418,7 @@ macro_rules! class_definition {
                     match result {
                         Ok(rust_self) => {
                             let data = Box::new(rust_self);
-                            unsafe { $crate::sys::Data_Set_Struct_Value(rb_self, ::std::mem::transmute(data)) };
+                            ruby_try!($crate::sys::safe::Data_Set_Struct_Value(rb_self, ::std::mem::transmute(data)));
                         }
                         Err(err) => { println!("TYPE ERROR: {:?}", err); }
                     }
@@ -489,7 +485,7 @@ macro_rules! impl_struct_to_rust {
         item! {
             impl<'a> $crate::ToRust<$cls> for $crate::CheckedValue<$cls> {
                 fn to_rust(self) -> $cls {
-                    unsafe { ::std::mem::transmute($crate::sys::Data_Get_Struct_Value(self.inner)) }
+                    ::std::mem::transmute(ruby_try!($crate::sys::safe::Data_Get_Struct_Value(self.inner)))
                 }
             }
         }
@@ -501,7 +497,7 @@ macro_rules! impl_struct_to_rust {
                     use ::std::ffi::{CStr};
 
                     if unsafe { __HELIX_ID == ::std::mem::transmute(sys::rb_obj_class(self)) } {
-                        if unsafe { $crate::sys::Data_Get_Struct_Value(self) == ::std::ptr::null() } {
+                        if ruby_try!($crate::sys::safe::Data_Get_Struct_Value(self)) == ::std::ptr::null() {
                             Err(format!("Uninitialized {}", $crate::inspect(unsafe { sys::rb_obj_class(self) })))
                         } else {
                             Ok(unsafe { CheckedValue::new(self) })
