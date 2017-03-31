@@ -155,7 +155,8 @@ macro_rules! handle_exception {
         }
 
         let res = ::std::panic::catch_unwind(|| {
-            $($body)*
+            panic!("Aaaaaahhhhh!");
+            // $($body)*
         });
 
         if hide_err {
