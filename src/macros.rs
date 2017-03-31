@@ -35,6 +35,7 @@ macro_rules! ruby_try {
     { $val:expr } => { $val.unwrap_or_else(|e| panic!($crate::Exception::from_state(e)) ) }
 }
 
+// TODO: Can we change this to use the macro from libcruby?
 #[macro_export]
 macro_rules! ruby_funcall {
     // NOTE: Class and method cannot be variables. If that becomes necessary, I think we'll have to pass them
@@ -69,6 +70,8 @@ macro_rules! ruby_funcall {
             };
 
             if !state.is_empty() {
+                // FIXME: This panic! can cause Win32 (at least on AppVeyor) to immediately
+                //   crash the entire process.
                 panic!($crate::Exception::from_state(state));
             }
 
