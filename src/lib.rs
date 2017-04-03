@@ -112,7 +112,8 @@ impl Exception {
         Exception::Ruby(state)
     }
 
-    pub fn raise(&self) -> sys::VALUE {
+    // Will this leak the Exception object?
+    pub fn raise(&self) -> ! {
         // Both of these will immediately leave the Rust stack. We need to be careful that nothing is
         // left behind. If there are memory leaks, this is definitely a possible culprit.
         match *self {
@@ -129,7 +130,6 @@ impl Exception {
                 }
             }
         }
-        unsafe { sys::Qnil } // Return a Ruby nil
     }
 }
 

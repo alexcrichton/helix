@@ -164,7 +164,7 @@ extern "C" {
 
     pub fn rb_intern(string: c_string) -> ID;
     pub fn rb_intern_str(string: VALUE) -> ID;
-    pub fn rb_raise(exc: VALUE, string: c_string, ...);
+    pub fn rb_raise(exc: VALUE, string: c_string, ...) -> !;
 
     pub fn rb_funcallv(target: VALUE, name: ID, argc: isize, argv: *const VALUE) -> VALUE;
 
