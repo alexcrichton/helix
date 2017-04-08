@@ -46,7 +46,7 @@ macro_rules! ruby_funcall {
             // This method takes a Ruby Array of arguments
             // If there is a way to make this behave like a closure, we could further simplify things.
             #[allow(unused_variables)]
-            extern "C" fn __ruby_funcall_cb(arg_ary: $crate::sys::void_ptr) -> $crate::sys::void_ptr {
+            extern "C" fn __ruby_funcall_cb(arg_ary: *mut $crate::sys::void) -> *mut $crate::sys::void {
                 unsafe {
                     // Is this safe here?
                     let arg_ary = $crate::sys::VALUE::wrap(arg_ary);
@@ -60,12 +60,13 @@ macro_rules! ruby_funcall {
             let mut state = $crate::sys::EMPTY_TAG;
 
             let res = unsafe {
+                #[allow(unused_mut)]
                 let mut arg_ary = Vec::new();
                 $(
                     // We have to create this iteratively since we have to call to_ruby individually
                     arg_ary.push($arg.to_ruby());
                 )*
-                let arg_ary = $crate::sys::rb_ary_new_from_values(arg_ary.len() as isize, arg_ary.as_mut_ptr());
+                let mut arg_ary = $crate::sys::rb_ary_new_from_values(arg_ary.len() as isize, arg_ary.as_mut_ptr());
                 $crate::sys::rb_protect(__ruby_funcall_cb, arg_ary.as_ptr(), &mut state)
             };
 
@@ -500,11 +501,7 @@ macro_rules! impl_struct_to_rust {
                     use ::std::ffi::{CStr};
 
                     if unsafe { __HELIX_ID == ::std::mem::transmute(sys::rb_obj_class(self)) } {
-<<<<<<< 865a95227b60f5310161110a15c872460a817003
-                        if unsafe { $crate::sys::Data_Get_Struct_Value(self) == ::std::ptr::null_mut() } {
-=======
-                        if ruby_try!($crate::sys::safe::Data_Get_Struct_Value(self)) == ::std::ptr::null() {
->>>>>>> Make final Ruby methods safe
+                        if ruby_try!($crate::sys::safe::Data_Get_Struct_Value(self)) == ::std::ptr::null_mut() {
                             Err(format!("Uninitialized {}", $crate::inspect(unsafe { sys::rb_obj_class(self) })))
                         } else {
                             Ok(unsafe { CheckedValue::new(self) })

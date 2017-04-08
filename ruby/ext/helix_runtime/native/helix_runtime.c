@@ -26,11 +26,11 @@ long HELIX_RARRAY_LEN(VALUE array) {
   return RARRAY_LEN(array);
 }
 
-const VALUE* HELIX_RARRAY_PTR(VALUE array) {
+VALUE* HELIX_RARRAY_PTR(VALUE array) {
   return RARRAY_PTR(array);
 }
 
-const void* HELIX_RARRAY_CONST_PTR(VALUE array) {
+const VALUE* HELIX_RARRAY_CONST_PTR(VALUE array) {
   return RARRAY_CONST_PTR(array);
 }
 

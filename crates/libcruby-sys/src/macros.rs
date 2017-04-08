@@ -58,7 +58,7 @@ macro_rules! ruby_safe_fn {
             // Must include ret_to_ptr and ptr_to_ret
             $($funcs)+
 
-            extern "C" fn cb(args_ptr: $crate::void_ptr) -> $crate::void_ptr {
+            extern "C" fn cb(args_ptr: *mut $crate::void) -> *mut $crate::void {
                 let ret = unsafe {
                     let args: &Args = &*(args_ptr as *const Args);
                     $crate::$name($( args.$argn ),*)
@@ -69,7 +69,7 @@ macro_rules! ruby_safe_fn {
             let mut state = $crate::EMPTY_TAG;
 
             let res = unsafe {
-                let args_ptr: void_ptr = &args as *const _ as void_ptr;
+                let args_ptr: *mut void = &args as *const _ as *mut void;
                 $crate::rb_protect(cb, args_ptr, &mut state)
             };
 
@@ -94,8 +94,8 @@ macro_rules! ruby_safe_fns {
     { $name:ident($( $argn:ident: $argt:ty ),*) -> VALUE; $($rest:tt)* } => {
         ruby_safe_fn! {
             $name($( $argn: $argt ),*) -> $crate::VALUE {
-                fn ret_to_ptr(ret: $crate::VALUE) -> $crate::void_ptr { ret.as_ptr() }
-                fn ptr_to_ret(ptr: $crate::void_ptr) -> $crate::VALUE { $crate::VALUE::wrap(ptr) }
+                fn ret_to_ptr(mut ret: $crate::VALUE) -> *mut $crate::void { ret.as_ptr() }
+                fn ptr_to_ret(ptr: *mut $crate::void) -> $crate::VALUE { $crate::VALUE::wrap(ptr) }
             }
         }
 
@@ -113,8 +113,8 @@ macro_rules! ruby_safe_fns {
     { $name:ident($( $argn:ident: $argt:ty ),*); $($rest:tt)* } => {
         ruby_safe_fn! {
             $name($( $argn: $argt ),*) -> () {
-                fn ret_to_ptr(_: ()) -> $crate::void_ptr { unsafe { $crate::Qnil }.as_ptr() }
-                fn ptr_to_ret(_: $crate::void_ptr) { }
+                fn ret_to_ptr(_: ()) -> *mut $crate::void { unsafe { $crate::Qnil }.as_ptr() }
+                fn ptr_to_ret(_: *mut $crate::void) { }
             }
         }
 
