@@ -123,20 +123,28 @@ macro_rules! class_definition {
             ($($mimpl)* pub fn $name($($self_mod)* $self_arg, $($arg : $argty),*) -> $ret $body) ;
             ($($mdef)* {
                 extern "C" fn __ruby_method__(rb_self: $crate::sys::VALUE, $($arg : $crate::sys::VALUE),*) -> $crate::sys::VALUE {
-                    let checked = __checked_call__(rb_self, $($arg),*);
-                    match checked {
-                        Ok(val) => $crate::ToRuby::to_ruby(val),
-                        Err(err) => {
-                            let exception = err.exception();
-                            let message = err.message();
-                            drop(err);
-                            unsafe {
-                                $crate::sys::rb_raise(exception,
-                                                    $crate::sys::SPRINTF_TO_S,
-                                                    message);
-                            }
+                    let error = {
+                        let checked = __checked_call__(rb_self, $($arg),*);
+
+                        match checked {
+                            Ok(val) => {
+                                return $crate::ToRuby::to_ruby(val);
+                            },
+
+                            Err(err) => err
                         }
-                    }
+                    };
+
+                    error.raise();
+
+                    // let exception = err.exception();
+                    // let message = err.message();
+                    // drop(err);
+                    // unsafe {
+                    //     $crate::sys::rb_raise(exception,
+                    //                         $crate::sys::SPRINTF_TO_S,
+                    //                         message);
+                    // }
                 }
 
                 fn __checked_call__(rb_self: $crate::sys::VALUE, $($arg : $crate::sys::VALUE),*) -> Result<$ret, $crate::ExceptionInfo> {
