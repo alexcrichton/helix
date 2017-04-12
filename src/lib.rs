@@ -118,6 +118,10 @@ impl ExceptionInfo {
         }
     }
 
+    pub fn exception(&self) -> VALUE {
+        self.exception.0
+    }
+
     pub fn message(&self) -> VALUE {
         self.message
     }

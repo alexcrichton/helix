@@ -126,7 +126,16 @@ macro_rules! class_definition {
                     let checked = __checked_call__(rb_self, $($arg),*);
                     match checked {
                         Ok(val) => $crate::ToRuby::to_ruby(val),
-                        Err(err) => err.raise()
+                        Err(err) => {
+                            let exception = err.exception();
+                            let message = err.message();
+                            drop(err);
+                            unsafe {
+                                $crate::sys::rb_raise(exception,
+                                                    $crate::sys::SPRINTF_TO_S,
+                                                    message);
+                            }
+                        }
                     }
                 }
 
