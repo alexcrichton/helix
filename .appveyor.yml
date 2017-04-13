@@ -1,5 +1,5 @@
 environment:
-  EXAMPLES: console membership turbo_blank
+  EXAMPLES: console
   VERBOSE: true
   matrix:
     # 32-bit
