@@ -1,11 +1,12 @@
 environment:
-  EXAMPLES: calculator
+  EXAMPLES: calculator console membership turbo_blank
   VERBOSE: true
   matrix:
     # 32-bit
     - RUBY_VERSION: 23
-      RUST_HOST: i686-pc-windows-gnu
+      RUST_HOST: i686-pc-windows-msvc
       RUST_VERSION: stable
+
 
 install:
   - appveyor DownloadFile https://win.rustup.rs/ -FileName rustup-init.exe
