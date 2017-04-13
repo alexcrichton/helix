@@ -7,23 +7,19 @@ environment:
       RUST_HOST: i686-pc-windows-msvc
       RUST_VERSION: stable
 
-
 install:
-  - appveyor DownloadFile https://win.rustup.rs/ -FileName rustup-init.exe
+  - appveyor-retry appveyor DownloadFile https://win.rustup.rs/ -FileName rustup-init.exe
   - rustup-init.exe -y --default-toolchain=%RUST_VERSION% --default-host=%RUST_HOST%
   - set PATH=%PATH%;C:\Users\appveyor\.cargo\bin
 
   - set PATH=C:\Ruby%RUBY_VERSION%\bin;C:\Ruby%RUBY_VERSION%\DevKit\bin;C:\Ruby%RUBY_VERSION%\DevKit\mingw\bin;%APPVEYOR_BUILD_FOLDER%\ruby\windows_build;%PATH%
   - echo %PATH%
   - set HELIX_ROOT=%APPVEYOR_BUILD_FOLDER%
-  - bash ./scripts/ci-install
 
 test_script:
-  - rake
+  - ruby bar.rb
+  - rustc lib.rs --crate-type dylib -L.
+  - copy lib.dll native.so
+  - ruby foo.rb
 
 build: off
-
-#init:
-  #- ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
-#on_finish:
-  #- ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
