@@ -4,7 +4,7 @@ environment:
   matrix:
     # 32-bit
     - RUBY_VERSION: 23
-      RUST_HOST: i686-pc-windows-msvc
+      RUST_HOST: i686-pc-windows-gnu
       RUST_VERSION: stable
 
 install:
