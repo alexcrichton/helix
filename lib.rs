@@ -1,3 +1,5 @@
+#![allow(bad_style)]
+
 type VALUE = *const u8;
 type c_string = *const i8;
 type c_func = *const u8;
@@ -16,7 +18,7 @@ extern {
 pub extern fn Init_native() {
     unsafe {
         let raw_class = rb_define_class(b"Console\0".as_ptr() as *const _,
-                                             rb_cObject);
+                                        rb_cObject);
         rb_define_method(
             raw_class,
             b"freak_out\0".as_ptr() as *const _,
@@ -26,12 +28,22 @@ pub extern fn Init_native() {
     }
 
     extern fn __ruby_method__(_rb_self: VALUE) -> VALUE {
-        let _res = ::std::panic::catch_unwind(|| panic!());
+        wut();
         unsafe {
-            let s1 = String::from("test\0");
+            let s1 = mk();
             rb_raise(rb_eRuntimeError,
                      b"%s\0".as_ptr() as *const _,
                      s1.as_ptr() as *const u8)
         }
+    }
+
+    #[inline(never)]
+    fn wut() {
+        drop(std::panic::catch_unwind(|| panic!()));
+    }
+
+    #[inline(never)]
+    fn mk() -> String {
+        String::from("test\0")
     }
 }
