@@ -1,4 +1,4 @@
-#include <setjmp.h>
+#include <setjmpex.h>
 #include <stdio.h>
 #include <windows.h>
 
@@ -7,6 +7,7 @@ static jmp_buf env;
 __declspec(dllexport)
 void rb_raise(char *msg) {
   printf("raise: %s\n", msg);
+  fflush(stdout);
   longjmp(env, 1);
 }
 

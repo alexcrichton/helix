@@ -15,8 +15,12 @@ int main() {
   assert(init != NULL);
 
   thunk fn = init();
-  printf("invoke1: %d\n", rb_invoke(fn));
-  printf("invoke2: %d\n", rb_invoke(fn));
+  int r = rb_invoke(fn);
+  printf("invoke1: %d\n", r);
+  fflush(stdout);
+  r = rb_invoke(fn);
+  printf("invoke2: %d\n", r);
+  fflush(stdout);
 
   return 0;
 }
