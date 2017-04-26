@@ -5,7 +5,7 @@ environment:
     # 32-bit
     - RUBY_VERSION: 21
       RUST_HOST: i686-pc-windows-msvc
-      RUST_VERSION: stable
+      RUST_VERSION: nightly
 
 install:
   - appveyor-retry appveyor DownloadFile https://win.rustup.rs/ -FileName rustup-init.exe
@@ -27,7 +27,7 @@ test_script:
   - link.exe cpp.obj /dll /out:native.so msvcrt.lib msvcrt-ruby230.lib
   - ruby foo.rb
 
-  - rustc lib.rs --crate-type cdylib -L.
+  - rustc lib.rs --crate-type dylib -L.
   - copy lib.dll native.so
   - ruby foo.rb
 
