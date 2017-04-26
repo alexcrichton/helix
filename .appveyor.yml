@@ -22,6 +22,11 @@ test_script:
 
   - set PATH=C:\Ruby%RUBY_VERSION%\bin;%PATH%
   - ruby bar.rb
+
+  - cl.exe cpp/lib.cpp /Focpp.obj /c /MD /EHsc
+  - link.exe cpp.obj /dll /out:native.so msvcrt.lib msvcrt-ruby230.lib
+  - ruby foo.rb
+
   - rustc lib.rs --crate-type cdylib -L.
   - copy lib.dll native.so
   - ruby foo.rb

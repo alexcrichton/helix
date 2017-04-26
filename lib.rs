@@ -12,6 +12,9 @@ extern {
     fn rb_define_class(name: c_string, superclass: VALUE) -> VALUE;
     fn rb_define_method(class: VALUE, name: c_string, func: c_func, arity: isize);
     fn rb_raise(exc: VALUE, string: c_string, ...) -> !;
+
+    fn malloc(amt: usize) -> *mut u8;
+    fn free(ptr: *mut u8);
 }
 
 #[no_mangle]
@@ -28,22 +31,47 @@ pub extern fn Init_native() {
     }
 
     extern fn __ruby_method__(_rb_self: VALUE) -> VALUE {
-        wut();
+        drop(std::panic::catch_unwind(|| panic!()));
         unsafe {
-            let s1 = mk();
+            let s1 = Foo::new();
             rb_raise(rb_eRuntimeError,
                      b"%s\0".as_ptr() as *const _,
-                     s1.as_ptr() as *const u8)
+                     s1.ptr);
         }
     }
+}
 
-    #[inline(never)]
-    fn wut() {
-        drop(std::panic::catch_unwind(|| panic!()));
+struct Foo {
+    ptr: *mut u8,
+}
+
+extern "system" {
+    fn ExitProcess(code: u32);
+}
+
+extern {
+    fn memcpy(dst: *mut u8,
+              src: *const u8,
+              amt: usize) -> *mut u8;
+}
+
+impl Foo {
+    fn new() -> Foo {
+        unsafe {
+            let ptr = malloc(4);
+            if ptr.is_null() {
+                ExitProcess(4);
+            }
+            memcpy(ptr, b"foo\0".as_ptr(), 4);
+            Foo { ptr: ptr }
+        }
     }
+}
 
-    #[inline(never)]
-    fn mk() -> String {
-        String::from("test\0")
+impl Drop for Foo {
+    fn drop(&mut self) {
+        unsafe {
+            free(self.ptr);
+        }
     }
 }
