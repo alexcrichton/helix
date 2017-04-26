@@ -12,18 +12,29 @@ install:
   - rustup-init.exe -y --default-toolchain=%RUST_VERSION% --default-host=%RUST_HOST%
   - set PATH=%PATH%;C:\Users\appveyor\.cargo\bin
 
-  - set PATH=C:\Ruby%RUBY_VERSION%\bin;C:\Ruby%RUBY_VERSION%\DevKit\bin;C:\Ruby%RUBY_VERSION%\DevKit\mingw\bin;%APPVEYOR_BUILD_FOLDER%\ruby\windows_build;%PATH%
-  - echo %PATH%
-  - set HELIX_ROOT=%APPVEYOR_BUILD_FOLDER%
+  - call "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\vcvarsall.bat" x86
+
+    #- set PATH=C:\Ruby%RUBY_VERSION%\bin;C:\Ruby%RUBY_VERSION%\DevKit\bin;C:\Ruby%RUBY_VERSION%\DevKit\mingw\bin;%APPVEYOR_BUILD_FOLDER%\ruby\windows_build;%PATH%
+    #- echo %PATH%
+    #- set HELIX_ROOT=%APPVEYOR_BUILD_FOLDER%
 
 test_script:
-  - ruby bar.rb
-  - rustc lib.rs --crate-type dylib -L.
-  - copy lib.dll native.so
-  - ruby foo.rb
+  - cl.exe c/lib.c /Foruby.obj /c
+  - dir
+  - link.exe ruby.obj /dll /out:ruby.dll
+  - dir
+  - cl.exe c/foo.c ruby.lib /Femyruby.exe
+  - dir
+  - rustc.exe c/lib.rs --crate-type dylib -L. --crate-name rust
+  - dir
+  - .\myruby.exe
+  # - ruby bar.rb
+  # - rustc lib.rs --crate-type dylib -L.
+  # - copy lib.dll native.so
+  # - ruby foo.rb
 
 build: off
-init:
-  - ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
-on_finish:
-  - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+# init:
+#   - ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+# on_finish:
+#   - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
